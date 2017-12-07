@@ -1,0 +1,19 @@
+{application, transfer,
+    [{description, "An OTP application"},
+        {vsn, "0.1.0"},
+        {registered, []},
+        {mod, {transfer_app, []}},
+        {applications,
+            [kernel,
+                stdlib,
+                cowboy,
+                database,
+                lager
+            ]},
+        {env, []},
+        {modules, []},
+
+        {maintainers, []},
+        {licenses, []},
+        {links, []}
+    ]}.
