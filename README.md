@@ -5,11 +5,11 @@ An application which uses cowboy as http server and riak as database to transfer
 
 1. change dir to transfer, run the command
 
-`rebar3 auto`
+    `rebar3 auto`
 
 2. start transfer application
 
-`application:ensure_all_started(transfer).`
+    `application:ensure_all_started(transfer).`
 
 ## upload data
 
