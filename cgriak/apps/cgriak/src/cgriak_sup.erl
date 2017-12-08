@@ -1,9 +1,9 @@
 %%%-------------------------------------------------------------------
-%% @doc transfer top level supervisor.
+%% @doc cgriak top level supervisor.
 %% @end
 %%%-------------------------------------------------------------------
 
--module(transfer_sup).
+-module(cgriak_sup).
 
 -behaviour(supervisor).
 
@@ -28,18 +28,7 @@ start_link() ->
 
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 init([]) ->
-    RestartStrategy = one_for_one,
-    MaxRestarts = 1000,
-    MaxSecondsBetweenRestarts = 3600,
-
-    SupFlags = {RestartStrategy, MaxRestarts, MaxSecondsBetweenRestarts},
-
-    Restart = permanent,
-    Shutdown = 2000,
-    Type = worker,
-    Dumper = {dumper, {dumper, start_link, []},
-        Restart, Shutdown, Type, [dumper]},
-    {ok, {SupFlags, [Dumper]}}.
+    {ok, { {one_for_all, 0, 1}, []} }.
 
 %%====================================================================
 %% Internal functions

@@ -1,9 +1,9 @@
 %%%-------------------------------------------------------------------
-%% @doc transfer public API
+%% @doc cgriak public API
 %% @end
 %%%-------------------------------------------------------------------
 
--module(transfer_app).
+-module(cgriak_app).
 
 -behaviour(application).
 
@@ -15,20 +15,7 @@
 %%====================================================================
 
 start(_StartType, _StartArgs) ->
-    Routes = [
-        {"/api/obj/:id", transfer_server, #{}}
-    ],
-    Dispatch = cowboy_router:compile([
-        %% {HostMatch, list({PathMatch, Handler, InitialState})}
-        {'_', Routes}
-    ]),
-    {ok, _} = cowboy:start_clear(my_http_listener,
-        [{port, 8080}],
-        #{env => #{dispatch => Dispatch}}
-    ),
-    application:ensure_all_started(database),
-    application:ensure_all_started(gun),
-    transfer_sup:start_link().
+    cgriak_sup:start_link().
 
 %%--------------------------------------------------------------------
 stop(_State) ->

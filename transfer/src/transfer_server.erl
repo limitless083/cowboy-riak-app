@@ -6,7 +6,7 @@
 %%% @end
 %%% Created : 30. Nov 2017 10:18 AM
 %%%-------------------------------------------------------------------
--module(transfer_data_handler).
+-module(transfer_server).
 -author("bgk").
 
 %% API
@@ -22,6 +22,7 @@
 -include_lib("kernel/include/file.hrl").
 -include_lib("database/include/obj.hrl").
 -define(OBJECT_DIR, "/tmp/oids/").
+-define(OBJECT_STORAGE_ROUTE, "/api/obj/").
 
 init(Req, State) ->
     {cowboy_rest, Req, State}.
@@ -37,16 +38,34 @@ content_types_accepted(Req, State) ->
 
 upload(Req, State) ->
     Oid = cowboy_req:binding(id, Req),
-    {ok, IODevice} = file:open(?OBJECT_DIR ++ binary_to_list(Oid), [raw, binary, write]),
+    Filepath = ?OBJECT_DIR ++ binary_to_list(Oid),
+    {ok, IODevice} = file:open(Filepath, [raw, binary, write]),
     case upload_stream(Req, IODevice, erlang:crc32(<<>>), 0) of
         {error, _Reason} ->
             Req1 = cowboy_req:set_resp_body(#{<<"reason">> => <<"interrupted!">>}, Req),
             Req2 = cowboy_req:reply(400, Req1),
             {stop, Req2, State};
         {ok, CRC32, ByteSize, Req1} ->
-            riak_db:add_obj(binary_to_integer(Oid), ByteSize, CRC32),
-            Req2 = cowboy_req:reply(200, Req1),
-            {stop, Req2, State}
+            file:close(IODevice),
+            UserAgent = cowboy_req:header(<<"user-agent">>, Req, <<"unknown">>),
+            lager:info("UserAgent:~p", [UserAgent]),
+            case UserAgent of
+                <<"internal">> ->
+                    Req2 = cowboy_req:reply(200, Req1),
+                    {stop, Req2, State};
+                _ ->
+                    Route = ?OBJECT_STORAGE_ROUTE ++ binary_to_list(Oid),
+                    case gen_server:call(dumper, {replicate, Route, Filepath}, infinity) of
+                        {ok, completed} ->
+                            riak_db:add_obj(binary_to_integer(Oid), ByteSize, CRC32),
+                            Req2 = cowboy_req:reply(200, Req1),
+                            {stop, Req2, State};
+                        {error, incompleted} ->
+                            Req2 = cowboy_req:set_resp_body(#{<<"reason">> => <<"replicate_incompleted!">>}, Req1),
+                            Req3 = cowboy_req:reply(400, Req1),
+                            {stop, Req3, State}
+                    end
+            end
     end.
 
 upload_stream(Req0, IODevice, CRC32, Size) ->
