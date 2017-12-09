@@ -165,8 +165,9 @@ code_change(_OldVsn, State, _Extra) ->
 replicate(MinCopies, WantedCopies, Route, Filepath) ->
     %% ensure WantedCopies is less than near transfer servers
     NearestTransferServers = nearest_transfer_servers(WantedCopies),
+    lager:info("NearestTransferServers:~p", [NearestTransferServers]),
     pmap(
-        fun({Host, Port}) ->
+        fun({_Node, Host, Port}) ->
             transfer_client:send_file(Host, Port, Route, Filepath)
         end,
         NearestTransferServers,
@@ -181,7 +182,40 @@ backend(Route, Filepath) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 nearest_transfer_servers(N) ->
     {ok, CgriakList} = application:get_env(cgriak, cgriak_list),
-    erlang:element(1, lists:split(N, CgriakList)).
+    Index = get_index(lists:map(fun({X, _, _}) -> X end, CgriakList), node()),
+    NearestIndexes = get_nearest_index(length(CgriakList), N, Index),
+    lists:map(fun(X) -> lists:nth(X, CgriakList) end, NearestIndexes).
+
+get_nearest_index(Len, N, Index) ->
+    case Len =< N of
+        true ->
+            lists:seq(1, Len) -- [Index];
+        false ->
+            %% index
+            lists:map(
+                fun(X) ->
+                    X rem Len + 1
+                end,
+                lists:seq(Index, Index + N - 1)
+            )
+    end.
+
+get_index(List, Element) ->
+    get_index(List, Element, 1).
+
+get_index(List, Element, Location) ->
+    case Location > length(List) of
+        true ->
+            -1;
+        false ->
+            case lists:nth(Location, List) of
+                Element ->
+                    Location;
+                _ ->
+                    get_index(List, Element, Location + 1)
+            end
+    end.
+
 
 pmap(F, L, NWanted, ExpectedRes) ->
     S = self(),
