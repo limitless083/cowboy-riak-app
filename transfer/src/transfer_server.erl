@@ -42,7 +42,7 @@ upload(Req, State) ->
     {ok, IODevice} = file:open(Filepath, [raw, binary, write]),
     case upload_stream(Req, IODevice, erlang:crc32(<<>>), 0) of
         {error, _Reason} ->
-            Req1 = cowboy_req:set_resp_body(#{<<"reason">> => <<"interrupted!">>}, Req),
+            Req1 = cowboy_req:set_resp_body(<<"interrupted!">>, Req),
             Req2 = cowboy_req:reply(400, Req1),
             {stop, Req2, State};
         {ok, CRC32, ByteSize, Req1} ->
