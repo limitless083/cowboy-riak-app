@@ -61,7 +61,7 @@ upload(Req, State) ->
                             Req2 = cowboy_req:reply(200, Req1),
                             {stop, Req2, State};
                         {error, incompleted} ->
-                            Req2 = cowboy_req:set_resp_body(#{<<"reason">> => <<"replicate_incompleted!">>}, Req1),
+                            Req2 = cowboy_req:set_resp_body(<<"replicate_incompleted!">>, Req1),
                             Req3 = cowboy_req:reply(400, Req1),
                             {stop, Req3, State}
                     end
@@ -88,14 +88,14 @@ download(Req, State) ->
     Filename = ?OBJECT_DIR ++ binary_to_list(Oid),
     case file:read_file_info(Filename) of
         {error, _} ->
-            Req1 = cowboy_req:set_resp_body(#{<<"reason">> => <<"oid object not exsist!">>}, Req),
+            Req1 = cowboy_req:set_resp_body(<<"oid object not exsist!">>, Req),
             Req2 = cowboy_req:reply(400, Req1),
             {stop, Req2, State};
         {ok, #file_info{size = Size}} ->
             FileRecord = riak_db:get_obj(binary_to_integer(Oid)),
             case FileRecord of
                 undefined ->
-                    Req1 = cowboy_req:set_resp_body(#{<<"reason">> => <<"oid record not exsist!">>}, Req),
+                    Req1 = cowboy_req:set_resp_body(<<"oid record not exsist!">>, Req),
                     Req2 = cowboy_req:reply(400, Req1),
                     {stop, Req2, State};
                 _ ->
